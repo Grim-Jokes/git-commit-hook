@@ -1,0 +1,46 @@
+#!/usr/bin/env python
+import subprocess
+
+import sys
+import re
+
+
+def main():
+    with open(sys.argv[1], 'r') as commit_message_file:
+        commit_message = commit_message_file.read()
+
+    branch_name = subprocess.check_output("git symbolic-ref --short HEAD",
+                                          shell=True).strip().decode('utf-8')
+
+    pattern_to_ignore = re.compile(
+        '^master$|^develop$|^release(/|-)\d+\.\d+(\.\d+)?$')
+
+    ignore_group = pattern_to_ignore.search(branch_name)
+
+    if ignore_group:
+        with open(sys.argv[1], 'w') as commit_message_file:
+            commit_message_file.write(commit_message)
+        sys.exit(0)
+
+    pattern = re.compile('(PLUM-\d+)')
+
+    results = pattern.search(branch_name)
+
+    if not results:
+        print (
+            "Missing ticket number from branch name: {0}".format(branch_name))
+        sys.exit(1)
+
+    issue_id = results.group(0)
+
+    header = "{issue}:\n\n".replace('{issue}', issue_id)
+
+    commit_message = header + commit_message
+
+    with open(sys.argv[1], 'w') as commit_message_file:
+        commit_message_file.write(commit_message)
+
+    sys.exit(0)
+
+
+main()
